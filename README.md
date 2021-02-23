@@ -27,6 +27,10 @@ This extension contributes the following settings:
 ### 0.0.1
 
 * Add the basic feature to open ADO link and copy link.
+
+### 0.0.3
+
+* Support Git URL scenario.
 -----------------------------------------------------------------------------------------------------------
 ## Following extension guidelines
 

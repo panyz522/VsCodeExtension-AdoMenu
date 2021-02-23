@@ -5,7 +5,31 @@ import * as path from 'path';
 import * as open from 'open';
 import simpleGit, {SimpleGit} from 'simple-git';
 
-async function getAdoUrl() {
+export function getHttpUrl(url: string) {
+	var match = url.match(/(.*)@/);
+	if (match === null) {
+		throw new Error("No org string in URL.");
+	}
+	const org = match[1];
+	
+	var match = url.match(/@vs\-ssh\.([\w\.]+)(:[\w]+)?\//);
+	if (match === null) {
+		throw new Error("No domain string in URL.");
+	}
+	const domain = match[1];
+	
+	var match = url.match(new RegExp(`${org}/([\\w\\-_]+)/([\\w\\-_]+)`));
+	if (match === null) {
+		throw new Error("No project and/or repo string in URL.");
+	}
+	const project = match[1];
+	const repo = match[2];
+
+	const httpUrl = `https://${org}.${domain}/${project}/_git/${repo}`;
+	return httpUrl;
+}
+
+export async function getAdoUrl() {
 	// The code you place here will be executed every time your command is executed
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -26,31 +50,40 @@ async function getAdoUrl() {
 		rawurl = await git.listRemote(["--get-url"]);
 	} catch(e) {
 		vscode.window.showErrorMessage('Unable to get remote url. Execption: ' + e);
-		return
+		return;
+	}
+
+	if (rawurl === null) {
+		vscode.window.showErrorMessage('Unable to get remote url. git remote --get-url returned null');
+		return;
 	}
 
 	if (!rawurl.startsWith("http")) {
-		vscode.window.showErrorMessage('Unable to get remote Azure DevOps URL. URL got: ' + rawurl);
-		return;
+		try {
+			rawurl = getHttpUrl(rawurl);
+		} catch(e) {
+			vscode.window.showErrorMessage('Unable to convert Git URL to HTTP URL. Execption: ' + e);
+			return;
+		}
 	}
 
 	const url = rawurl.split("\n")[0].trim();
 
 	var rootDir: string | null = null;
 	try {
-		rootDir = await git.revparse("--show-toplevel")
+		rootDir = await git.revparse("--show-toplevel");
 	} catch (e) {
 		vscode.window.showErrorMessage('Unable to get git root folder. Exception: ' + e);
 		return;
 	}
 
-	if (rootDir == null) {
+	if (rootDir === null) {
 		vscode.window.showErrorMessage('Unable to get git root folder. Git return: ' + rootDir);
 		return;
 	}
 
 	const relPath = fileName.substring(rootDir?.length).replace(/\\/g, "%2F");
-	const finalUrl = `${url}?path=${relPath}&line=${startLine}&lineEnd=${endLine}&lineStartColumn=${startChar}&lineEndColumn=${endChar}&lineStyle=plain&_a=contents`
+	const finalUrl = `${url}?path=${relPath}&line=${startLine}&lineEnd=${endLine}&lineStartColumn=${startChar}&lineEndColumn=${endChar}&lineStyle=plain&_a=contents`;
 
 	// console.log(`${fileName} ${startLine}:${startChar}-${endLine}:${endChar} ${url} ${rootDir}`);
 	// console.log(url);
@@ -72,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// The commandId parameter must match the command field in package.json
 	let openInAdo = vscode.commands.registerCommand('adomenu.openInAdo', async () => {
 		const finalUrl = await getAdoUrl();
-		if (finalUrl == undefined) {
+		if (finalUrl === undefined) {
 			return;
 		}
 		
@@ -84,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let copyAdoLink = vscode.commands.registerCommand('adomenu.copyAdoLink', async () => {
 		const finalUrl = await getAdoUrl();
-		if (finalUrl == undefined) {
+		if (finalUrl === undefined) {
 			return;
 		}
 		vscode.env.clipboard.writeText(finalUrl);

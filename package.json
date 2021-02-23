@@ -2,8 +2,12 @@
   "name": "adomenu",
   "displayName": "AdoMenu",
   "description": "Commands to interact with Azure DevOps",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "publisher": "YongzhenPan",
+  "repository": {
+    "url": "https://github.com/panyz522/VsCodeExtension-AdoMenu",
+    "type": "git"
+  },
   "engines": {
     "vscode": "^1.52.0"
   },
